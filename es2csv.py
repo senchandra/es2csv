@@ -14,7 +14,6 @@ TIMES_TO_TRY = 3
 RETRY_DELAY = 60
 META_FIELDS = [u'_id', u'_index', u'_score', u'_type']
 
-
 # Retry decorator for functions with exceptions
 def retry(ExceptionToCheck, tries=TIMES_TO_TRY, delay=RETRY_DELAY):
     def deco_retry(f):
@@ -52,7 +51,9 @@ class Es2csv:
         self.scroll_time = '30m'
 
         self.csv_headers = list(META_FIELDS) if self.opts.meta_fields else []
-        self.tmp_file = '{}.tmp'.format(opts.output_file)
+        self.tmp_file = '{}'.format(opts.output_file)
+        self.csv_writer = csv.DictWriter(self.tmp_file, fieldnames=self.csv_headers)
+        self.first_instance = 0
 
     @retry(elasticsearch.exceptions.ConnectionError, tries=TIMES_TO_TRY)
     def create_connection(self):
@@ -77,6 +78,7 @@ class Es2csv:
     @retry(elasticsearch.exceptions.ConnectionError, tries=TIMES_TO_TRY)
     def search_query(self):
         @retry(elasticsearch.exceptions.ConnectionError, tries=TIMES_TO_TRY)
+
         def next_scroll(scroll_id):
             return self.es_conn.scroll(scroll=self.scroll_time, scroll_id=scroll_id)
 
@@ -131,7 +133,7 @@ class Es2csv:
             print(json.dumps(res, ensure_ascii=False).encode('utf8'))
 
         if self.num_results > 0:
-            codecs.open(self.opts.output_file, mode='w', encoding='utf-8').close()
+            #codecs.open(self.opts.output_file, mode='w', encoding='utf-8').close()
             codecs.open(self.tmp_file, mode='w', encoding='utf-8').close()
 
             hit_list = []
@@ -201,7 +203,12 @@ class Es2csv:
                 out = {field: hit[field] for field in META_FIELDS} if self.opts.meta_fields else {}
                 if '_source' in hit and len(hit['_source']) > 0:
                     to_keyvalue_pairs(hit['_source'])
-                    tmp_file.write('{}\n'.format(json.dumps(out)))
+                    self.csv_writer = csv.DictWriter(tmp_file, fieldnames=self.csv_headers)
+                    if self.first_instance == 0:
+                        self.csv_writer.writeheader()
+                        self.first_instance = 1
+                    self.csv_writer.writerow(json.loads(json.dumps(out)))
+                    #tmp_file.write('{}\n'.format(json.dumps(out)))
         tmp_file.close()
 
     def write_to_csv(self):
@@ -237,3 +244,4 @@ class Es2csv:
             self.es_conn.clear_scroll(body=','.join(self.scroll_ids))
         except:
             pass
+
