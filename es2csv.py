@@ -133,7 +133,11 @@ class Es2csv:
             print(json.dumps(res, ensure_ascii=False).encode('utf8'))
 
         if self.num_results > 0:
-            #codecs.open(self.opts.output_file, mode='w', encoding='utf-8').close()
+            if '/' in self.tmp_file:
+                file_path = self.tmp_file.rpartition('/')
+                parent_path = file_path[0]
+                if os.path.isdir(parent_path) == False:
+                    os.makedirs(parent_path)
             codecs.open(self.tmp_file, mode='w', encoding='utf-8').close()
 
             hit_list = []
@@ -208,36 +212,7 @@ class Es2csv:
                         self.csv_writer.writeheader()
                         self.first_instance = 1
                     self.csv_writer.writerow(json.loads(json.dumps(out)))
-                    #tmp_file.write('{}\n'.format(json.dumps(out)))
         tmp_file.close()
-
-    def write_to_csv(self):
-        if self.num_results > 0:
-            self.num_results = sum(1 for line in codecs.open(self.tmp_file, mode='r', encoding='utf-8'))
-            if self.num_results > 0:
-                output_file = codecs.open(self.opts.output_file, mode='a', encoding='utf-8')
-                csv_writer = csv.DictWriter(output_file, fieldnames=self.csv_headers)
-                csv_writer.writeheader()
-                timer = 0
-                widgets = ['Write to csv ',
-                           progressbar.Bar(left='[', marker='#', right=']'),
-                           progressbar.FormatLabel(' [%(value)i/%(max)i] ['),
-                           progressbar.Percentage(),
-                           progressbar.FormatLabel('] [%(elapsed)s] ['),
-                           progressbar.ETA(), '] [',
-                           progressbar.FileTransferSpeed(unit='lines'), ']'
-                           ]
-                bar = progressbar.ProgressBar(widgets=widgets, maxval=self.num_results).start()
-
-                for line in codecs.open(self.tmp_file, mode='r', encoding='utf-8'):
-                    timer += 1
-                    bar.update(timer)
-                    csv_writer.writerow(json.loads(line))
-                output_file.close()
-                bar.finish()
-            else:
-                print('There is no docs with selected field(s): {}.'.format(','.join(self.opts.fields)))
-            os.remove(self.tmp_file)
 
     def clean_scroll_ids(self):
         try:
