@@ -217,6 +217,7 @@ class Es2csv:
     def clean_scroll_ids(self):
         try:
             self.es_conn.clear_scroll(body=','.join(self.scroll_ids))
+            return str(self.num_results)
         except:
             pass
 
