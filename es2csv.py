@@ -52,7 +52,7 @@ class Es2csv:
 
         self.csv_headers = list(META_FIELDS) if self.opts.meta_fields else []
         self.tmp_file = '{}'.format(opts.output_file)
-        self.csv_writer = csv.DictWriter(self.tmp_file, fieldnames=self.csv_headers, delimiter=str(u'{}'.format(self.opts.delimiter)))
+        self.csv_writer = csv.DictWriter(self.tmp_file, fieldnames=self.csv_headers)
         self.first_instance = 0
 
     @retry(elasticsearch.exceptions.ConnectionError, tries=TIMES_TO_TRY)
@@ -207,7 +207,7 @@ class Es2csv:
                 out = {field: hit[field] for field in META_FIELDS} if self.opts.meta_fields else {}
                 if '_source' in hit and len(hit['_source']) > 0:
                     to_keyvalue_pairs(hit['_source'])
-                    self.csv_writer = csv.DictWriter(tmp_file, fieldnames=self.csv_headers, delimiter=str(u'{}'.format(self.opts.delimiter)))
+                    self.csv_writer = csv.DictWriter(tmp_file, fieldnames=self.csv_headers, delimiter=u'{}'.format(self.opts.delimiter))
                     if self.first_instance == 0:
                         self.csv_writer.writeheader()
                         self.first_instance = 1
